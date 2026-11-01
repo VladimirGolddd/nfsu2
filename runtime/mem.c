@@ -4,9 +4,13 @@
 #include "cpu.h"
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef __wasm__
+#if !defined(__wasm__) && !defined(NFSU2_WIN)
 #include <signal.h>
 #include <sys/mman.h>
+#endif
+#ifdef NFSU2_WIN
+#define WIN32_LEAN_AND_MEAN   /* windows.h would include <winsock.h>: runtime/winsock.h on this path */
+#include <windows.h>
 #endif
 #include <string.h>
 #include <unistd.h>
@@ -36,7 +40,100 @@ uint8_t g_cbits[1u<<15] = {0};
 
 
 void mprot_arm(uint32_t);
-#ifdef __wasm__
+#if defined(NFSU2_WIN)
+/* Windows (cpu.h): 4 GB reserved at g_mem; the guest span [0, GUEST_END)
+ * is committed whole at start, so it reads and writes like the browser's
+ * linear memory (Windows hands out the zero pages as they are touched; the
+ * commit charge is 640 MB).  Committing only keeps the bitmap, as on wasm;
+ * release gives the pages back (decommit + commit: they read zero again).
+ * Above GUEST_END: the host blocks (mem_host_alloc), the guest never goes
+ * there.  A fault inside the reservation is reported with the guest state. */
+uint32_t guest_fn_from_host(const void *pc);   /* dispatch.c */
+#define HOST_LO 0x30000000ull
+#define HOST_HI 0xF0000000ull
+static uint64_t g_host_next = HOST_LO;
+static SRWLOCK g_host_lk = SRWLOCK_INIT;
+static LONG WINAPI win_fault(EXCEPTION_POINTERS *x){
+    DWORD code = x->ExceptionRecord->ExceptionCode;
+    if (code != EXCEPTION_ACCESS_VIOLATION && code != EXCEPTION_STACK_OVERFLOW) return EXCEPTION_CONTINUE_SEARCH;
+    static volatile LONG once;
+    if (InterlockedExchange(&once, 1)) return EXCEPTION_CONTINUE_SEARCH;
+    uint8_t *p = code == EXCEPTION_ACCESS_VIOLATION ? (uint8_t *)x->ExceptionRecord->ExceptionInformation[1] : 0;
+    void *pc = x->ExceptionRecord->ExceptionAddress;
+    uint32_t gfn = guest_fn_from_host(pc);
+    if (gfn) fprintf(stderr, "\n*** FAULT IN GUEST FUNCTION: sub_%08x\n", gfn);
+    if (code == EXCEPTION_STACK_OVERFLOW)
+        fprintf(stderr, "\n*** HOST STACK OVERFLOW (endless recursion in guest code?) at %p\n", pc);
+    else if (p >= g_mem && p < g_mem + GSZ)
+        fprintf(stderr, "\n*** GUEST MEMORY FAULT: guest address 0x%08llx (pc %p)\n", (unsigned long long)(p - g_mem), pc);
+    else
+        fprintf(stderr, "\n*** HOST ACCESS VIOLATION: %p (pc %p)\n", (void *)p, pc);
+    if (g_cur_cpu){
+        CPU *c = (CPU *)g_cur_cpu;
+        fprintf(stderr, "    eax=%08x ecx=%08x edx=%08x ebx=%08x\n", c->eax, c->ecx, c->edx, c->ebx);
+        fprintf(stderr, "    esp=%08x ebp=%08x esi=%08x edi=%08x\n", c->esp, c->ebp, c->esi, c->edi);
+    }
+    if (g_cur_cpu && g_backtrace_fn) g_backtrace_fn(g_cur_cpu, 12);
+    if (g_report_fn) g_report_fn();
+    fflush(stderr);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+void mem_init(void){
+    if (g_mem) return;
+    g_mem = VirtualAlloc(0, (SIZE_T)GSZ, MEM_RESERVE, PAGE_NOACCESS);
+    if (!g_mem){ fprintf(stderr, "VirtualAlloc: could not reserve 4 GB of address space (error %lu)\n", GetLastError()); exit(1); }
+    if (!VirtualAlloc(g_mem, GUEST_END, MEM_COMMIT, PAGE_READWRITE)){
+        fprintf(stderr, "VirtualAlloc: could not commit the guest's %u MB (error %lu)\n", GUEST_END >> 20, GetLastError()); exit(1); }
+}
+void mem_commit(uint32_t addr, uint32_t size){
+    uint64_t lo = addr & ~0x3FFFull;
+    uint64_t hi = ((uint64_t)addr + size + 0x3FFF) & ~0x3FFFull;
+    if (hi > GUEST_END){
+        static int shown = 0;
+        if (shown++ < 8) fprintf(stderr, "mem_commit 0x%08x+%u beyond the guest span (0x%08x): ignored\n", addr, size, GUEST_END);
+        if (lo >= GUEST_END) return;
+        hi = GUEST_END;
+    }
+    for (uint64_t a2 = lo; a2 < hi; a2 += 0x4000ull){
+        uint32_t pg = (uint32_t)(a2 >> 14);
+        if (!(g_cbits[pg>>3] & (1u << (pg&7)))){ g_cbits[pg>>3] |= (uint8_t)(1u << (pg&7)); g_committed += 0x4000u; }
+    }
+}
+uint64_t mem_committed(void){ return g_committed; }
+void mem_release(uint32_t addr, uint32_t size, int rw){
+    uint64_t lo = ((uint64_t)addr + 0x3FFF) & ~0x3FFFull;
+    uint64_t hi = ((uint64_t)addr + size) & ~0x3FFFull;
+    if (hi <= lo || hi > GUEST_END) return;
+    if (!rw) memset(g_mem + lo, 0xDD, (size_t)(hi - lo));          /* HEAPCHECK: poison, no fault */
+    else if (!VirtualFree(g_mem + lo, (SIZE_T)(hi - lo), MEM_DECOMMIT)
+             || !VirtualAlloc(g_mem + lo, (SIZE_T)(hi - lo), MEM_COMMIT, PAGE_READWRITE))
+        memset(g_mem + lo, 0, (size_t)(hi - lo));
+    for (uint64_t a2 = lo; a2 < hi; a2 += 0x4000ull){
+        uint32_t pg = (uint32_t)(a2 >> 14);
+        if (rw) g_cbits[pg>>3] |= (uint8_t)(1u << (pg&7));
+        else    g_cbits[pg>>3] &= (uint8_t)~(1u << (pg&7));
+    }
+}
+/* A zeroed, committed block above the guest span for the host's shared
+ * structures; its offset from g_mem fits 32 bits (HADDR, runtime/web).
+ * Never freed (the renderer's arenas live as long as the process). */
+void *mem_host_alloc(size_t size, size_t align){
+    if (align < 64) align = 64;
+    AcquireSRWLockExclusive(&g_host_lk);
+    uint64_t a = (g_host_next + align - 1) & ~(uint64_t)(align - 1);
+    uint64_t e = (a + size + 0xFFFF) & ~0xFFFFull;
+    void *p = 0;
+    if (e <= HOST_HI && VirtualAlloc(g_mem + a, (SIZE_T)(e - a), MEM_COMMIT, PAGE_READWRITE)){ p = g_mem + a; g_host_next = e; }
+    ReleaseSRWLockExclusive(&g_host_lk);
+    if (!p) fprintf(stderr, "mem_host_alloc: no room for %zu bytes\n", size);
+    return p;
+}
+void mprot_arm(uint32_t a){ fprintf(stderr, "mprot: not available on Windows (0x%08x)\n", a); }
+void mprot_rearm(void){ }
+uint8_t *g_mprot_page = 0;
+void mem_altstack_install(void){ }
+void mem_fault_handler_install(void){ AddVectoredExceptionHandler(0, win_fault); }
+#elif defined(__wasm__)
 /* wasm: the guest span [0, GUEST_END) is ordinary linear memory, readable,
  * writable and zero from the start.  Committing only keeps the bitmap
  * (mem_is_committed, genexec, autotest probes) and the statistics; release
@@ -263,7 +360,7 @@ void mem_fault_handler_install(void){
     sigaction(SIGSEGV,&sa,0); sigaction(SIGBUS,&sa,0);
 }
 
-#endif /* !__wasm__ */
+#endif /* !__wasm__ && !NFSU2_WIN */
 
 int mem_load_pe(const char *path){
     FILE *f = fopen(path, "rb");

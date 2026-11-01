@@ -32,15 +32,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
 #include "web/host_abi.h"
 /* web/src/host/game-worker.ts: the I/O worker's VideoDecoder (movie.ts) */
-__attribute__((import_module("nfsu2"), import_name("movie_open")))
+NFSU2_IMPORT(movie_open)
 int nfsu2_movie_open(int w, int h);
-__attribute__((import_module("nfsu2"), import_name("movie_decode")))
+NFSU2_IMPORT(movie_decode)
 int nfsu2_movie_decode(int handle, uint32_t payload, uint32_t len, uint32_t y, uint32_t u, uint32_t v,
                        int ystride, int uvstride);
-__attribute__((import_module("nfsu2"), import_name("movie_close")))
+NFSU2_IMPORT(movie_close)
 int nfsu2_movie_close(int handle);
 static double now_ms(void){ return nfsu2_now_ms(); }
 #else

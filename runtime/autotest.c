@@ -705,7 +705,7 @@ static int fire(CPU *c, Ev *e, double tms){
     case C_AUDIORESET: { void audio_device_changed(const char *);
         audio_device_changed("autotest audioreset"); break; }
     case C_AUDIOSTALL:
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
         { void audio_test_stall(int); fprintf(stderr, "[autotest] f=%ld audiostall %ld ms (test-only)\n", g_frame, e->n);
           audio_test_stall((int)e->n); }
 #else
@@ -929,7 +929,7 @@ static int fire(CPU *c, Ev *e, double tms){
 }
 
 static double g_st_t = 0; static long g_st_f = 0; static double g_st_cpu = 0, g_st_gcpu = 0;
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
 /* The browser has no CPU clocks: busy time of the guest threads instead (the
  * guest lock held minus host waits, win32_ext.c).  cpu= is then the guest
  * threads' share of one core (the page's renderer and audio not included). */
@@ -962,7 +962,7 @@ static void status_line(double t, double tms, const char *label){
         int com_live_line(char *, size_t); k += com_live_line(ms + k, sizeof ms - (size_t)k); }
     if (k > 0 && k < (int)sizeof ms){                                   /* a texture pack in use */
         int texrep_status(char *, size_t); texrep_status(ms + k, sizeof ms - (size_t)k); }
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     /* per-frame guest busy time (p50/p95/p99/max) and the guest lock's queue
      * since the last line (runtime/web/gcpu.c, win32_ext.c) */
     if (k > 0) k = (int)strlen(ms);
@@ -977,7 +977,7 @@ static void status_line(double t, double tms, const char *label){
             nf > 0 ? (gcpu - g_st_gcpu) / nf : 0.0,
             mem_is_committed(0x8654a4u) ? MR32(0x8654a4u) : 0u,
             
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
             (long)((uintptr_t)sbrk(0) >> 20), ms);   /* no ru_maxrss: the wasm memory's size (it only grows) */
 #else
             (long)(ru.ru_maxrss / (1024 * 1024)), ms);
@@ -1026,7 +1026,7 @@ static void car_trace(void){
 
 void autotest_on_present(CPU *c){
     if (!g_inited) return;
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     { void gcpu_frame(void); gcpu_frame(); }        /* per-frame guest busy time (runtime/web/gcpu.c) */
     { void status_web_frame(void); status_web_frame(); } /* whether the player drives (runtime/web/status_web.c) */
     { void input_web_frame(void); input_web_frame(); }   /* the game's text entry, for a phone's keyboard (runtime/web/input_web.c) */

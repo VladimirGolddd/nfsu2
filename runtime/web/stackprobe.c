@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include "web/host_abi.h"
 
-__attribute__((import_module("nfsu2"), import_name("stack_frames"))) int nfsu2_stack_frames(void);
+NFSU2_IMPORT(stack_frames) int nfsu2_stack_frames(void);
 
 int g_stackprobe = -1;                  /* -1: not read yet */
 #define START_GAP 0x1000u             /* a thread's first esp is StackBase - 4 KB */

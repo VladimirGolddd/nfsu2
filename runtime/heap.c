@@ -49,7 +49,7 @@ void guest_backtrace(CPU *, int);
 long autotest_frame(void);
 void win32_set_last_error(CPU *, uint32_t);
 
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
 #define GH_BASE   0x08000000u          /* wasm: 512 MB below GUEST_END (cpu.h) */
 #define GH_LIMIT  0x28000000u
 #else

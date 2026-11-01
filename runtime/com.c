@@ -37,7 +37,7 @@ long metal_tex_uploaded(void);
 void metal_begin_frame(void);
 #include "gfx.h"
 #include "vsemu.h"
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
 /* The browser renderer takes WGSL instead of MSL (docs/web/gpu-abi.md). */
 #include "web/wgsl.h"
 #define SHADER_TEXT_CAP (256*1024)
@@ -1204,7 +1204,7 @@ static int gpuvs_id(const VSProg *prog, uint32_t vs, uint32_t decl,
           return -1;
       } }
     static char msl[160*1024];          /* HD: + capture kernel */
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     int len = vs_to_wgsl(prog, gid, (const int (*)[2])dcl, msl, sizeof msl);
     if (wgsl_dump_on()) wgsl_dump_vs(gid, (int)vs, decl, (const int (*)[2])dcl, msl, len);
 #else
@@ -1218,7 +1218,7 @@ static int gpuvs_id(const VSProg *prog, uint32_t vs, uint32_t decl,
     g_gvs_next++;
     g_gvs[slot].gid = gid; g_gvs[slot].state = 1;
     g_gvs_nk[gid] = vs_kmax(prog);
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     /* the falloff of a lit shader (oT2.x = s * w + o) for the other cars' headlights */
     { float rp[2]; void headlights_vs_ramp(float, float);
       if (vs_light_creg(prog, rp) >= 0) headlights_vs_ramp(rp[0], rp[1]); }
@@ -1645,7 +1645,7 @@ static int draw_up(uint32_t pt, uint32_t nv, uint32_t vp, uint32_t stride){
     vsk = fixmat_apply(vsk);
     g_ui_clip = 1.f;
     vsk = aspect_apply(vsk, prog);
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     { void metal_set_ui_clip(float); metal_set_ui_clip(g_ui_clip); }
 #endif
 
@@ -3725,7 +3725,7 @@ int com_call(CPU *c, uint32_t magic){
             uint32_t copy = bytes ? gbuf_alloc(bytes) : 0;
             if (copy && el) memcpy(g_mem+copy, g_mem+el, bytes);
             MR32(h+4)=copy; MR32(h+8)=bytes;
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
             if (wgsl_dump_on() && copy) wgsl_dump_decl(h, g_mem+copy, bytes);
 #endif
             if(pp) MR32(pp)=h; r=0; }
@@ -3770,7 +3770,7 @@ int com_call(CPU *c, uint32_t magic){
                     static char msl[SHADER_TEXT_CAP];
                     int id = ++g_psn;
                     void metal_register_ps(int, const char *);
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
                     if (wgsl_dump_on()) wgsl_dump_obj("ps", id, g_mem+copy, sz, pp3);
                     int pl = ps_to_wgsl(pp3, id, msl, sizeof msl);
                     if (wgsl_dump_on()) wgsl_dump_ps(id, id, msl, pl);
@@ -3788,7 +3788,7 @@ int com_call(CPU *c, uint32_t magic){
                      * to that slot, Metal rejects the draw
                      * (validateCommonDrawErrors).  The variant is chosen at
                      * draw time from the bound texture. */
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
                     if (id < PSCUBE){
                         int cl = ps_to_wgsl_ex(pp3, id + PSCUBE, msl, sizeof msl, 1u);
                         if (wgsl_dump_on()) wgsl_dump_ps(id + PSCUBE, id, msl, cl);
@@ -3811,7 +3811,7 @@ int com_call(CPU *c, uint32_t magic){
             if (MID(CreateVertexShader) && copy && sz >= 8 && g_vsprogn < MAXVS){
                 VSProg *vp2 = vs_compile((const uint32_t *)(g_mem+copy), sz/4u);
                 if (vp2){ g_vsprog[g_vsprogn] = vp2; MR32(h+12) = g_vsprogn++;
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
                     if (wgsl_dump_on()) wgsl_dump_obj("vs", (int)g_vsprogn - 1, g_mem+copy, sz, vp2);
 #endif
                     if (ENVC("VSDUMP")){
@@ -4639,7 +4639,7 @@ void com_mem_stats(uint64_t *com_bytes, uint64_t *buf_bytes, uint64_t *objs){
     *objs = g_com_live;
 }
 void com_init(void){
-#ifndef __wasm__
+#if !defined(__wasm__) && !defined(NFSU2_WIN)
     mem_commit(COM_BASE,0x10000);
 #endif
    
@@ -4651,7 +4651,7 @@ void draw_stats_save(uint64_t *a, uint64_t *b){ g_ptype=a; g_stride=b; }
 void com_report(void){
     fprintf(stderr,"\n=== COM / D3D9 LAYER ===\n");
     ws_report();
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     { void headlights_report(void); headlights_report(); }
 #endif
     if (g_aspfix != 1.f)

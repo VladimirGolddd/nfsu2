@@ -19,13 +19,22 @@
 #define GSZ ((uint64_t)GUEST_END)
 #else
 extern uint8_t *g_mem;
+#ifdef NFSU2_WIN
+/* Windows (win/): the browser's layout on a host pointer.  The guest owns
+ * [0, GUEST_END) of a 4 GB reservation at g_mem, committed whole at start
+ * (runtime/mem.c); the runtime's shared blocks for the host (gpu_web.c's
+ * arenas) live above it, so the host reads them at g_mem + a 32-bit offset
+ * exactly as the page reads wasm addresses.  It runs the same platform
+ * layer as the browser (runtime/web), with win/host in place of the page. */
+#define GUEST_END 0x28000000u
+#endif
 /* The whole 32-bit guest address space is reserved as PROT_NONE; the regions
  * in use are made RW with mem_commit. A bad guest access then becomes a
  * diagnosable signal instead of crashing the host.                       */
 #define GSZ 0x100000000ull
 #endif
 
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
 /* Guest memory is untyped: the game stores a float with fstp and reads the
  * same bytes back with mov (every by-value vector copy does), so MRF32 and
  * MR32 of one address must never be assumed apart.  Plain float/uint32_t
@@ -88,6 +97,13 @@ uint8_t *guest_memchk(uint32_t a, unsigned n, const char *fn);
 #define MR64(a)  (*(gm_u64  *)(GMEM_ + (uint32_t)(a)))
 #define MRF32(a) (*(gm_f32  *)(GMEM_ + (uint32_t)(a)))
 #define MRF64(a) (*(gm_f64  *)(GMEM_ + (uint32_t)(a)))
+#elif defined(NFSU2_WIN)
+#define MR8(a)   (*(uint8_t *)(g_mem + (uint32_t)(a)))
+#define MR16(a)  (*(gm_u16  *)(g_mem + (uint32_t)(a)))
+#define MR32(a)  (*(gm_u32  *)(g_mem + (uint32_t)(a)))
+#define MR64(a)  (*(gm_u64  *)(g_mem + (uint32_t)(a)))
+#define MRF32(a) (*(gm_f32  *)(g_mem + (uint32_t)(a)))
+#define MRF64(a) (*(gm_f64  *)(g_mem + (uint32_t)(a)))
 #else
 #define MR8(a)   (*(uint8_t  *)(g_mem + (uint32_t)(a)))
 #define MR16(a)  (*(uint16_t *)(g_mem + (uint32_t)(a)))

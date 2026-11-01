@@ -21,7 +21,7 @@ uint64_t g_cycle_break = 0, g_oob_node = 0, g_depth_guard = 0;
 static uint64_t guard_total = 0, guard_cap = 0;
 static CPU *g_guard_cpu = 0;
 
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
 #define HEAP_LO 0x08000000u
 #define HEAP_HI 0x28000000u
 #else
@@ -485,7 +485,7 @@ void sub_0060faa0(CPU *c){
  * enh_view_setup is an empty inline function.  The web build keeps the
  * headlight view's (9) for the other cars' lights (headlights.c), and turns
  * the view against a phone's tilt (below). */
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
 /* The touch controls' level horizon (web/src/app/touch.ts): while tilt
  * steers, the main view (1) and its road reflection (4, laid over it in
  * screen space) turn against the phone's tilt, about the camera's forward
@@ -511,7 +511,7 @@ static void view_roll(uint32_t m, float a){
 void sub_005c7ec0_orig(CPU *c);
 void sub_005c7ec0(CPU *c){
     uint32_t plat = c->ecx, view = MR32(c->esp + 4u);
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     uint32_t cam = 0, fcam = 0; uint8_t keep[0x40]; uint16_t fov = 0, fkeep = 0;
     if (view && mem_is_committed(view + 0x43u) && (MR32(view + 4u) == 1u || MR32(view + 4u) == 4u)){
         float a = input_view_roll(), pr = 0.f;
@@ -534,7 +534,7 @@ void sub_005c7ec0(CPU *c){
     if (view && plat && mem_is_committed(view + 0x43u) && mem_is_committed(plat + 0xbfu)){
         enh_view_setup(MR32(view + 4u), (const float *)(g_mem + plat),
                        MR32(view + 0x40u));
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
         void headlights_view(uint32_t id, const float *plat);
         headlights_view(MR32(view + 4u), (const float *)(g_mem + plat));
 #endif
@@ -555,7 +555,7 @@ void sub_005c7ec0(CPU *c){
  * keeps the lifted body (one forwarding call). */
 void sub_0075bed4_orig(CPU *c);
 void sub_0075bed4(CPU *restrict c){
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     FTOL2_BODY(c);                                          /* cpu.h */
     POP32(c->eip);
 #else
@@ -586,7 +586,7 @@ void sub_005bc210_orig(CPU *c);
 void sub_005bc300_orig(CPU *c);
 void sub_0048ac60_orig(CPU *c);
 uint64_t g_cull_lifted;            /* calls that ran the lifted body (tests) */
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
 /* the x87 at PC=24 has this result too: a normal float or zero */
 static inline uint32_t cull_ok(float x){
     float a = __builtin_fabsf(x);
@@ -675,21 +675,21 @@ static int frustum_native(CPU *restrict c){
 }
 #endif
 void sub_005bc210(CPU *restrict c){
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     if (xform_native(c)) return;
 #endif
     g_cull_lifted++;
     sub_005bc210_orig(c);
 }
 void sub_005bc300(CPU *restrict c){
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     if (frustum_native(c)) return;
 #endif
     g_cull_lifted++;
     sub_005bc300_orig(c);
 }
 void sub_0048ac60(CPU *restrict c){
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     if (frustum_native(c)) return;
 #endif
     g_cull_lifted++;
@@ -710,7 +710,7 @@ void sub_0048ac60(CPU *restrict c){
 void sub_0068ce7c_orig(CPU *c);
 uint64_t g_mmul_lifted;            /* calls that ran the lifted body (tests) */
 void sub_0068ce7c(CPU *restrict c){
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
 #pragma clang fp contract(off)
     typedef float v4 __attribute__((vector_size(16), aligned(4)));
     uint32_t e = c->esp, out = MR32(e + 4u), A = MR32(e + 8u), B = MR32(e + 12u);
@@ -1571,7 +1571,7 @@ static void hull_qsort(const HullSort *h, int32_t num){
     }
 }
 void sub_0060cee0(CPU *restrict c){
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     uint32_t e = c->esp, arr = MR32(e + 4u), cmp = MR32(e + 12u);
     int32_t n = (int32_t)MR32(e + 8u);
     if (cmp == 0x0060ce60u || cmp == 0x0060cec0u){
@@ -1633,7 +1633,7 @@ void sub_0060cee0(CPU *restrict c){
  * 10 checks it against the lifted body.  The Mac keeps the lifted body. */
 void sub_004895e0_orig(CPU *c);
 uint64_t g_sh_lifted;              /* calls that ran the lifted body (tests) */
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
 #pragma clang fp contract(off)
 typedef float sh4 __attribute__((vector_size(16), aligned(4)));
 typedef int32_t shi4 __attribute__((vector_size(16), aligned(4)));
@@ -1774,7 +1774,7 @@ static int shrot_native(CPU *restrict c){
 #pragma clang fp contract(on)
 #endif
 void sub_004895e0(CPU *restrict c){
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     if (sh_native(c)) return;
 #endif
     g_sh_lifted++;
@@ -1783,7 +1783,7 @@ void sub_004895e0(CPU *restrict c){
 void sub_00489ba0_orig(CPU *c);
 uint64_t g_shrot_lifted;           /* calls that ran the lifted body (tests) */
 void sub_00489ba0(CPU *restrict c){
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
     if (shrot_native(c)) return;
 #endif
     g_shrot_lifted++;

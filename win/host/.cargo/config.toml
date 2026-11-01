@@ -1,0 +1,6 @@
+# Builds from Linux (win/build.sh): clang drives lld for the MinGW-w64 target
+# (win/tools/cc-link.sh), as for the runtime.  Statically linked: the program
+# needs no MinGW DLLs next to it.
+[target.x86_64-pc-windows-gnu]
+linker = "../tools/cc-link.sh"
+rustflags = ["-C", "target-feature=+crt-static"]

@@ -63,6 +63,12 @@ Everyone who plays from the same server can meet in free roam.
 More in [docs/web/DESIGN.md](docs/web/DESIGN.md). The same tree still builds the native macOS version
 (`./gen.sh`, `./build.sh && ./link.sh`, `./run.sh`).
 
+## Windows (native, new)
+
+`win/build.sh` builds the same game as a Windows 10/11 program, `nfsu2.exe`, with no browser: the browser build's
+runtime compiled to x86-64 and a native host (Direct3D 12 or Vulkan, WASAPI, XInput) in the page's place. It is new
+and not yet played through on Windows; movies and multiplayer are not in it yet. See [win/README.md](win/README.md).
+
 ## Credits
 
 Based on Talha Müderrisoğlu's [NFSU2Recomp](https://github.com/TalhaMudo/NFSU2Recomp) (its MIT version, see the

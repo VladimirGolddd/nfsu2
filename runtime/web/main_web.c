@@ -136,7 +136,11 @@ int main(int argc, char **argv){
     fprintf(stderr, "    TEB=0x%08x  stack=0x%08x..0x%08x  esp=0x%08x\n\n", TEB_BASE, STACK_LO, STACK_HI, cpu.esp);
     {
         pthread_attr_t at; pthread_attr_init(&at);
+#ifdef NFSU2_WIN
+        pthread_attr_setstacksize(&at, 64u * 1024u * 1024u);   /* Windows: the real stack of the lifted calls (win32_ext.c) */
+#else
         pthread_attr_setstacksize(&at, 16u * 1024u * 1024u);   /* shadow stack only; see win32_ext.c */
+#endif
         pthread_t th;
         if (pthread_create(&th, &at, guest_main_thread, 0) != 0){
             fprintf(stderr, "could not start the guest main thread\n"); return 1; }

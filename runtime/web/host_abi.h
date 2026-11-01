@@ -5,6 +5,13 @@
 #ifndef NFSU2_HOST_ABI_H
 #define NFSU2_HOST_ABI_H
 #include <stdint.h>
+/* A function of the host: the page's import on wasm; on Windows a plain
+ * function of win/host (the native host links with the runtime). */
+#ifdef __wasm__
+#define NFSU2_IMPORT(name) __attribute__((import_module("nfsu2"), import_name(#name)))
+#else
+#define NFSU2_IMPORT(name)
+#endif
 enum {
     HOST_KIND_GPU    = 1,   /* renderer control block (runtime/web/gpu_web.c) */
     HOST_KIND_AUDIO  = 2,   /* PCM ring + audio control (audio_web.c) */
@@ -15,11 +22,11 @@ enum {
     HOST_KIND_LAN    = 7,   /* LAN play's virtual-LAN rings (net_lan.c; layout net_proto.h) */
 };
 /* imported from the page (web/src/host/game-worker.ts, module "nfsu2") */
-__attribute__((import_module("nfsu2"), import_name("register")))
+NFSU2_IMPORT(register)
 int nfsu2_register(int kind, void *ptr, uint32_t size);
-__attribute__((import_module("nfsu2"), import_name("now_ms")))
+NFSU2_IMPORT(now_ms)
 double nfsu2_now_ms(void);
 /* ms the calling thread has spent blocked in the host (file I/O, sleeps) */
-__attribute__((import_module("nfsu2"), import_name("blocked_ms")))
+NFSU2_IMPORT(blocked_ms)
 double nfsu2_blocked_ms(void);
 #endif

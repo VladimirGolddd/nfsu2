@@ -780,7 +780,7 @@ static void bot_roam(long f){
         struct rusage ru; getrusage(RUSAGE_SELF, &ru);
         fprintf(stderr, "[bot] f=%ld segment done: %d events won this launch, heap %u MB live, VA %u MB, max rss %ld MB\n",
                 f, B.won, win32_heap_live() >> 20, heap,
-#ifdef __wasm__
+#if defined(__wasm__) || defined(NFSU2_WIN)
                 0L);   /* no ru_maxrss in WASI */
 #else
                 (long)(ru.ru_maxrss >> 20));

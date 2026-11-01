@@ -19,3 +19,4 @@ __pycache__/
 *.o
 *.log
 .DS_Store
+/win/host/target/

@@ -112,7 +112,18 @@ static char     g_dump_label[64];
 
 /* ---- init / attach ----------------------------------------------------- */
 static void shader_put(int op, int id, const char *src);
+#ifdef NFSU2_WIN
+/* Windows: the blocks the host reads live above the guest span (mem.c), and
+ * their addresses in the records are offsets from g_mem, as the page's are
+ * wasm addresses (cpu.h) */
+static void *zalloc(size_t n){ return mem_host_alloc(n, 64); }   /* zeroed */
+#define HADDR(p) ((uint32_t)((const uint8_t *)(p) - g_mem))
+#define HPTR(a)  ((void *)(g_mem + (uint32_t)(a)))
+#else
 static void *zalloc(size_t n){ void *p = aligned_alloc(64, (n + 63) & ~(size_t)63); if (p) memset(p, 0, n); return p; }
+#define HADDR(p) ((uint32_t)(uintptr_t)(p))
+#define HPTR(a)  ((void *)(uintptr_t)(a))
+#endif
 
 static void gw_init(void){
     if (g_inited) return;
@@ -138,7 +149,7 @@ static void gw_init(void){
         uint8_t *rq = zalloc(RQ_CAP);
         if (!rq) ok = 0;
         if (!ok){ fprintf(stderr, "[gpu] out of memory for the record buffers: no rendering\n"); want = 0; }
-        else { g_ctl->rq_ptr = (uint32_t)(uintptr_t)rq; g_ctl->rq_cap = RQ_CAP; }
+        else { g_ctl->rq_ptr = HADDR(rq); g_ctl->rq_cap = RQ_CAP; }
     }
     g_on = want;
     /* The renderer runs the game's vertex shaders on the GPU (com.c reads
@@ -209,7 +220,7 @@ static GwCmd *rq_begin(uint32_t op, uint32_t payload){
         fprintf(stderr, "[gpu] resource record of %u bytes does not fit the queue: dropped (op %u)\n", len, op);
         return NULL;
     }
-    uint8_t *ring = (uint8_t *)(uintptr_t)g_ctl->rq_ptr;
+    uint8_t *ring = (uint8_t *)HPTR(g_ctl->rq_ptr);
     for (int waited = 0;;){
         uint32_t head = (uint32_t)g_ctl->rq_head, tail = (uint32_t)ald(&g_ctl->rq_tail);
         uint32_t off = head & (cap - 1u), pad = off + len > cap ? cap - off : 0u;
@@ -889,8 +900,8 @@ static void handoff(uint32_t rb_id, uint32_t rb_tex, uint32_t rb_dst, uint32_t r
     Buf *B = &g_b[g_cur];
     GwFrame *F = &g_ctl->frame[g_cur];
     F->seq = g_gframe; F->dn = B->dn; F->vn = B->vn; F->rvn = B->rvn; F->kn = B->kn; F->pscn = B->pscn;
-    F->draws = (uint32_t)(uintptr_t)B->d; F->tv = (uint32_t)(uintptr_t)B->v; F->raw = (uint32_t)(uintptr_t)B->rv;
-    F->k = (uint32_t)(uintptr_t)B->kb; F->psc = (uint32_t)(uintptr_t)B->psc;
+    F->draws = HADDR(B->d); F->tv = HADDR(B->v); F->raw = HADDR(B->rv);
+    F->k = HADDR(B->kb); F->psc = HADDR(B->psc);
     memcpy(B->kb + GW_K_TONE, &g_tone, sizeof g_tone);
     { GwLat *L = (GwLat *)(B->kb + GW_K_LAT);
       L->magic = GW_LAT_MAGIC; L->input_ms = hfr_frame_input_ms(); L->handoff_ms = now_ms(); }
@@ -1014,7 +1025,7 @@ int metal_read_texture(unsigned id, void *dst, unsigned pitch, unsigned rows){
     if (!rid) rid = g_rb_n = 1;
     ast(&g_ctl->rb_want, (int32_t)rid);
     double t0 = now_ms();
-    handoff(rid, id, (uint32_t)(uintptr_t)dst, pitch, rows);
+    handoff(rid, id, HADDR(dst), pitch, rows);
     g_handed = 1;
     double lim = 3000.0;
     int got = -1;
