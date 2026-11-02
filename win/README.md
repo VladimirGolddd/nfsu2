@@ -8,6 +8,15 @@ instead of WebAssembly, and a native host (`win/host/`, Rust) in the page's plac
 > self test passes on Vulkan (Mesa's software Vulkan under Wine). The first runs of the real game on a Windows PC
 > are still to come; see "Not yet" at the end.
 
+## The original game
+
+By default this is the PC game as it was, without the browser version's additions: no free roam with other
+players, LAN or online, no horns, drift mode, photo mode or text messages of ours, the career garage's own 5 slots,
+no Corsa or 106 for sale, none of the extra option rows (Horn Volume, Exposure and White Level, Power Units), the
+race HUD's own 4:3 layout, only the player's headlights on the road, the boot movies as the game plays them, and
+60 frames a second. What stays is what the port needs to run: the picture filling a wide screen, the sound's
+timing, the language setting. `Vanilla = 0` in `nfsu2.ini` brings the additions back (those that need no network).
+
 ## What you need
 
 - **The game:** your own PC copy, patched to v1.2 (North America), with the `SPEED2.EXE` the browser version needs
@@ -64,6 +73,7 @@ This host's own:
 
 | Setting | Default | |
 |---|---|---|
+| `Vanilla` | 1 | 0: the browser version's additions (above) |
 | `Width`, `Height` | 1280, 720 | the window's first size; the game follows the window |
 | `Fullscreen` | 0 | 1: borderless full screen from the start |
 | `VSync` | 1 | 0: present without waiting for the display (Mailbox or Immediate) |

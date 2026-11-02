@@ -90,17 +90,20 @@ int main(int argc, char **argv){
     dispatch_init(); win32_init();
     { extern void overrides_install(void); overrides_install(); }
     { extern void language_install(void); language_install(); }   /* NFSU2_LANGUAGE: the language pack, the exe's tables */
-    { extern void sponsors_install(void); sponsors_install(); }   /* the sponsor screens' Continue (help bar) */
-    { extern void lobbyclick_install(void); lobbyclick_install(); }   /* the lobby's list ignores a click on a dialog over it */
-    { extern void menusize_install(void); menusize_install(); }       /* the help bar's buttons at the page's menu button size */
-    { extern void olfilter_install(void); olfilter_install(); }       /* the Online lobby's Filter, once set, narrows its list */
-    { extern void tunegraph_install(void); tunegraph_install(); }     /* the tuning graphs' dots follow a press and a drag */
-    { extern void regional_install(void); regional_install(); }       /* the European game's Corsa and 106 for sale, and AI racers' cars */
-    { extern void garage_install(void); garage_install(); }           /* the career garage's slots 6-10 and Trade Car */
-    { extern void carshadow_install(void); carshadow_install(); }     /* a car's shadow 1.5 cm above the road, not 4: off its wheels */
-    { extern void hornmenu_install(void); hornmenu_install(); }   /* the horns' volume (registry HornVolume) */
-    { extern void tonemenu_install(void); tonemenu_install(); }   /* Exposure and White Level (registry) to the renderer */
-    { extern void powerunits_install(void); powerunits_install(); }   /* power in bhp or kW (registry PowerUnits), its row's methods */
+    /* the additions to the game: none of them with NFSU2_VANILLA (roam.c) */
+    { int nfsu2_vanilla(void); if (!nfsu2_vanilla()){
+        { extern void sponsors_install(void); sponsors_install(); }   /* the sponsor screens' Continue (help bar) */
+        { extern void lobbyclick_install(void); lobbyclick_install(); }   /* the lobby's list ignores a click on a dialog over it */
+        { extern void menusize_install(void); menusize_install(); }       /* the help bar's buttons at the page's menu button size */
+        { extern void olfilter_install(void); olfilter_install(); }       /* the Online lobby's Filter, once set, narrows its list */
+        { extern void tunegraph_install(void); tunegraph_install(); }     /* the tuning graphs' dots follow a press and a drag */
+        { extern void regional_install(void); regional_install(); }       /* the European game's Corsa and 106 for sale, and AI racers' cars */
+        { extern void garage_install(void); garage_install(); }           /* the career garage's slots 6-10 and Trade Car */
+        { extern void carshadow_install(void); carshadow_install(); }     /* a car's shadow 1.5 cm above the road, not 4: off its wheels */
+        { extern void hornmenu_install(void); hornmenu_install(); }   /* the horns' volume (registry HornVolume) */
+        { extern void tonemenu_install(void); tonemenu_install(); }   /* Exposure and White Level (registry) to the renderer */
+        { extern void powerunits_install(void); powerunits_install(); }   /* power in bhp or kW (registry PowerUnits), its row's methods */
+    } else fprintf(stderr, "vanilla: the original game, none of the additions (NFSU2_VANILLA)\n"); }
     { extern void autotest_init(void); autotest_init(); }       /* NFSU2_INPUT_SCRIPT ... */
     { extern void status_web_start(void); status_web_start(); }  /* counters for the page overlay */
     { extern void input_web_init(void); input_web_init(); }     /* the page's keys, mouse, pad, focus */

@@ -221,6 +221,7 @@ static void xinit(CPU *c, uint32_t db){
 /* our memory and records, the first time anything asks */
 static int ensure(CPU *c){
     if (g_blk) return 1;
+    { int nfsu2_vanilla(void); if (nfsu2_vanilla()) return 0; }   /* the game's own 5 slots (roam.c) */
     uint32_t b = gheap_alloc(1, 2u * XN * REC_SZ + REC_SZ + XN * SAVE_REC + 16u, 1);
     if (!b){ fprintf(stderr, "[garage] no guest memory for slots 6-10\n"); return 0; }
     g_blk = b;

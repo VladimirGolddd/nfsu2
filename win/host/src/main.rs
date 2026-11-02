@@ -249,6 +249,18 @@ fn main() {
     def("NFSU2_NET", "off");        // LAN and online play need the page's network relay: not in this host yet
     def("NFSU2_ONLINE", "0");
     def("NFSU2_ROAM", "0");
+    // the original PC game, without the additions of the browser version (Vanilla = 0 brings them back):
+    // the runtime leaves out the extra garage slots, the European cars, horns, drift and photo modes, the
+    // option rows of its own (roam.c nfsu2_vanilla); the settings below are the original's choices
+    def("NFSU2_VANILLA", "1");
+    if std::env::var("NFSU2_VANILLA").map(|v| v != "0" && !v.eq_ignore_ascii_case("off")).unwrap_or(true) {
+        def("NFSU2_INTRO", "original");          // the boot movies as the game plays them
+        def("NFSU2_HUD", "43");                  // the race HUD's own centred 4:3 layout
+        def("NFSU2_HEADLIGHTS", "off");          // only the player's headlights light the road
+        def("NFSU2_SHOW_HIDDEN_RACES", "0");     // hidden races show only nearby
+        def("NFSU2_PAD_FE_KEYS", "0");           // no extra Enter/Escape on the controller's buttons
+        def("NFSU2_FPS", "60");                  // 60 frames a second, as the game was made for
+    }
 
     let view = Arc::new(gpu::View { w: AtomicU32::new(1280), h: AtomicU32::new(720), resized: AtomicBool::new(false),
         img: Mutex::new([0.0; 4]), quit: AtomicBool::new(false) });

@@ -812,7 +812,22 @@ __attribute__((weak)) int roam_asipeer_frame(CPU *c){ (void)c; return 0; }
 __attribute__((weak)) int roam_asipeer_cmd(CPU *c, const char *args, long *wait_start){
     (void)c; (void)args; (void)wait_start;
     fprintf(stderr, "[roam] asi: not in this build (ASIPEER=1 ./link.sh orig makes out/nfsu2_asipeer)\n"); return 1; }
+/* NFSU2_VANILLA=1 (the Windows build's default, win/README.md): the game as
+ * the PC game is.  The main loop runs only what keeps the port working (the
+ * streamer's log, the language's texts, the kept-spot fix, the test driver);
+ * none of the additions: free roam and races between players, horns, drift
+ * mode, photo mode, our SMS, the option sliders of our own.  main_web.c
+ * leaves out the installs that change the game (garage, cars, menus ...). */
+int nfsu2_vanilla(void){
+    static int v = -1;
+    if (v < 0){ const char *e = getenv("NFSU2_VANILLA"); v = e && *e && strcmp(e, "0") && strcasecmp(e, "off"); }
+    return v;
+}
 int roam_hook(CPU *c, uint32_t ip){
+    if (nfsu2_vanilla()){
+        if (ip == HOOK_SITE(0x00581475)){ reads_frame(c); language_texts_frame(c); hiddenraces_frame(); carspot_frame(); roam_frame(c); return 1; }
+        return ip == HOOK_SITE(0x006005e0) || ip == HOOK_SITE(0x00581407);
+    }
     switch (ip){
     case HOOK_SITE(0x00581475): reads_frame(c); language_texts_frame(c); sms_frame(c); hiddenraces_frame(); carspot_frame(); mprace_frame(c); if (!roam_asipeer_frame(c)) roam_game_frame(c); racehorn_frame(c); racenet_frame(c); optslider_frame(c); drift_frame(c); photo_frame(c); roam_frame(c); return 1;
     /* Player::Update's HUD step (0x600590), behind its call of the HUD

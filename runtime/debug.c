@@ -96,13 +96,17 @@ void guest_hook(CPU *c, uint32_t ip){
     { int ws_hook(CPU *, uint32_t); if (ws_hook(c, ip)) return; }
     { int roam_hook(CPU *, uint32_t); if (roam_hook(c, ip)) return; }
     { int language_hook(CPU *, uint32_t); if (language_hook(c, ip)) return; }
+    /* the additions' hooks (none of them with NFSU2_VANILLA, roam.c): the
+     * instruction then runs as the game has it */
+    { int nfsu2_vanilla(void); if (!nfsu2_vanilla()){
     { int hornmenu_hook(CPU *, uint32_t); if (hornmenu_hook(c, ip)) return; }
     { int tonemenu_hook(CPU *, uint32_t); if (tonemenu_hook(c, ip)) return; }
     { int powerunits_hook(CPU *, uint32_t); if (powerunits_hook(c, ip)) return; }
     { int regional_hook(CPU *, uint32_t); if (regional_hook(c, ip)) return; }
     { int garage_hook(CPU *, uint32_t); if (garage_hook(c, ip)) return; }
+    } }
     { int sndlead_hook(CPU *, uint32_t); if (sndlead_hook(c, ip)) return; }
-    { int drift_hook(CPU *, uint32_t); if (drift_hook(c, ip)) return; }
+    { int nfsu2_vanilla(void); int drift_hook(CPU *, uint32_t); if (!nfsu2_vanilla() && drift_hook(c, ip)) return; }
     if (ip == 0x0065ae25u){
         uint32_t a1=MR32(c->esp+4u), a2=MR32(c->esp+8u), a3=MR32(c->esp+12u);
         if (!g_rec_esp0) g_rec_esp0 = c->esp;
